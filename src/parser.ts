@@ -49,7 +49,7 @@ export function parseFile(file: Blob): Promise<DbcParserResult> {
     })
 }
 
-export function parseString(dbcString: string) {
+export function parseString(dbcString: string): DbcParserResult {
     const lines = dbcString.split("\r\n");
     let state = DEFAULT;
     let message: MessageType = {
