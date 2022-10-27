@@ -1,6 +1,6 @@
 "use strict";
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.parseFromPath = exports.parse = void 0;
+exports.parseString = exports.parseFile = exports.isResultEmpty = void 0;
 const const_1 = require("./const");
 let result = {
     ecus: {},
@@ -19,7 +19,8 @@ function isResultEmpty(res) {
     });
     return empty;
 }
-function parse(file) {
+exports.isResultEmpty = isResultEmpty;
+function parseFile(file) {
     result = {
         ecus: {},
         messages: {},
@@ -48,32 +49,7 @@ function parse(file) {
         reader.readAsText(file, 'ISO-8859-15');
     });
 }
-exports.parse = parse;
-async function parseFromPath(filePath) {
-    let status = false;
-    return fetch(filePath)
-        .then((res) => {
-        if (res.status < 400)
-            return res.arrayBuffer();
-        throw new Error(res.status + ": " + res.statusText);
-    })
-        .then((buffer) => {
-        const decoder = new TextDecoder('iso-8859-15');
-        const text = decoder.decode(buffer);
-        status = true;
-        const parsedResult = parseString(text);
-        if (isResultEmpty(parsedResult)) {
-            throw new Error("Parsing error");
-        }
-        else {
-            return parsedResult;
-        }
-    })
-        .catch((err) => {
-        console.error("parseFromPath" + err);
-    });
-}
-exports.parseFromPath = parseFromPath;
+exports.parseFile = parseFile;
 function parseString(dbcString) {
     const lines = dbcString.split("\r\n");
     let state = const_1.DEFAULT;
@@ -142,6 +118,7 @@ function parseString(dbcString) {
     });
     return result;
 }
+exports.parseString = parseString;
 function parseVAL(line) {
     const data = line.trim().replace(/;/g, "").split(/\s+/);
     const message = data[1];

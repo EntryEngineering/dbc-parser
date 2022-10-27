@@ -1,133 +1,5 @@
 import { DEFAULT, MESSAGE_FOUND } from "./const";
-
-export type DbcParserResult = {
-    ecus: EcuObj,
-    messages: MessagesObj,
-    defaults: DefaultsObj,
-    valueTable: ValueTablesObj,
-    attributeDefs: AttributeDefsObj,
-    info: InfoObj
-}
-
-export interface SignalsObj {
-    [key: string]: SignalType
-}
-
-export interface MessagesObj {
-    [key: string]: MessageType
-}
-
-export interface ReceiversObj {
-    [key: string]: ReceiverType
-}
-
-export interface EcuObj {
-    [key: string]: EcuType
-}
-
-export interface DefaultsObj {
-    [key: string]: string
-}
-
-export interface InfoObj {
-    [key: string]: string | number
-}
-
-export interface AttributeDefsObj {
-    [key: string]: AttrDefType
-}
-
-export interface ValueTablesObj {
-    [key: string]: ValueTableType
-}
-
-export type ValueTableType = {
-    [key: string]: ValueTableItemType
-}
-
-export type ValueTableItemType = {
-    [key: string]: string
-}
-
-export type EcuType = {
-    name?: string,
-    Comment?: string,
-    ECUVariantDefault?: string,
-    GenNodAutoGenDsp?: string,
-    GenNodAutoGenSnd?: string,
-    GenNodSleepTime?: number
-    ILUsed?: string,
-    NmNode?: string,
-    NmhNode?: string,
-    NodeLayerModules?: number,
-    [key: string]: any
-}
-
-export type MessageType = {
-    id?: string
-    name?: string
-    dataLength?: string
-    sender?: string
-    signals: SignalsObj
-    Comment?: string
-    DiagRequest?: string
-    DiagResponse?: string
-    DiagState?: string
-    GenMsgCycleTime?: number
-    GenMsgCycleTimeFast?: number
-    GenMsgDelayTime?: number
-    GenMsgILSupport?: string
-    GenMsgPDUConstants?: string
-    GenMsgSendType?: string
-    GenMsgStartDelayTime?: number
-    MsgType?: string
-    NmMessage?: string
-    NmhMessage?: string
-    VAGTP20_API?: number
-    VAGTP20_DynConnection?: string
-    VAGTP20_DynSetup?: string
-    VAGTP20_StatConnection?: string
-    [key: string]: any
-}
-
-export type SignalType = {
-    messageId?: string
-    name: string
-    startBit: number
-    bitLength: number
-    byteOrder: string
-    byteType: string
-    factor: number
-    offset: number
-    min: number
-    max: number
-    unit: string
-    receivers: ReceiversObj
-    Multiplexing?: string
-    Fehlerwert?: string
-    GenSigActiveRepetitions?: number
-    GenSigFuncType?: string
-    GenSigMissingSourceValue?: string
-    GenSigSendType?: string
-    GenSigStartValue?: number
-    GenSigSwitchedByIgnition?: string
-    "NWM-WakeupAllowed"?: string
-    initValue?: number
-    Comment?: string
-    [key: string]: any
-}
-
-type ReceiverType = {
-    [key: string]: string
-}
-
-type AttrDefType = {
-    name?: string
-    type?: string
-    enumValues?: string[]
-    min?: string | number
-    max?: string | number
-}
+import { DbcParserResult, MessageType, EcuType, SignalType, ReceiversObj, AttrDefType } from "./types";
 
 let result: DbcParserResult = {
     ecus: {},
@@ -138,7 +10,7 @@ let result: DbcParserResult = {
     info: {}
 };
 
-function isResultEmpty(res: DbcParserResult): boolean {
+export function isResultEmpty(res: DbcParserResult): boolean {
     let empty = true;
     Object.values(res).forEach(value => {
         if (Object.keys(value).length > 0) {
@@ -148,7 +20,7 @@ function isResultEmpty(res: DbcParserResult): boolean {
     return empty;
 }
 
-export function parse(file: Blob): Promise<DbcParserResult> {
+export function parseFile(file: Blob): Promise<DbcParserResult> {
     result = {
         ecus: {},
         messages: {},
@@ -177,30 +49,7 @@ export function parse(file: Blob): Promise<DbcParserResult> {
     })
 }
 
-export async function parseFromPath(filePath: string) {
-    let status = false;
-    return fetch(filePath)
-        .then((res) => {
-            if (res.status < 400) return res.arrayBuffer();
-            throw new Error(res.status + ": " + res.statusText);
-        })
-        .then((buffer) => {
-            const decoder = new TextDecoder('iso-8859-15');
-            const text = decoder.decode(buffer);
-            status = true;
-            const parsedResult = parseString(text);
-            if (isResultEmpty(parsedResult)) {
-                throw new Error("Parsing error");
-            } else {
-                return parsedResult;
-            }
-        })
-        .catch((err) => {
-            console.error("parseFromPath" + err);
-        });
-}
-
-function parseString(dbcString: string) {
+export function parseString(dbcString: string) {
     const lines = dbcString.split("\r\n");
     let state = DEFAULT;
     let message: MessageType = {

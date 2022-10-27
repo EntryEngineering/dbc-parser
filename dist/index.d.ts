@@ -1,1 +1,1 @@
-export { parse, parseFromPath } from './parser';
+export { parseFile, parseString, isResultEmpty } from './parser';
