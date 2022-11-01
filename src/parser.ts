@@ -1,5 +1,5 @@
 import { DEFAULT, MESSAGE_FOUND } from "./const";
-import { DbcParserResult, MessageType, EcuType, SignalType, ReceiversObj, AttrDefType } from "./types";
+import { AttrDefType, DbcParserResult, EcuType, MessageType, ReceiversObj, SignalType } from "./types";
 
 let result: DbcParserResult = {
     ecus: {},
@@ -50,21 +50,26 @@ export function parseFile(file: Blob): Promise<DbcParserResult> {
 }
 
 export function parseString(dbcString: string): DbcParserResult {
-    const lines = dbcString.split("\r\n");
+    const lines = dbcString.split(/\r?\n/);
     let state = DEFAULT;
     let message: MessageType = {
         signals: {}
     };
-    lines.forEach(line => {
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i].trim();
+        const lineStart = line.split(" ")[0] + " ";
+        const semicolonLineLabels = ["BA_DEF_ ", "BA_DEF_REL_ ", "VAL_ ", "BA_ ", "BA_DEF_DEF_ ", "BA_REL_ ", "CM_ "];
         switch (state) {
             case DEFAULT:
-                if (line.trim().startsWith("BU_: ")) {
-                    let data = line.trim().split("BU_: ")[1].split(/\s+/);
+                if (line.startsWith("NS_ :")) {
+                    while (lines[i] !== "") i++;
+                } else if (line.startsWith("BU_: ")) {
+                    let data = line.split("BU_: ")[1].split(/\s+/);
                     data.forEach(e => {
                         let ecu: EcuType = { name: e };
                         result.ecus[e] = ecu;
                     })
-                } else if (line.trim().startsWith("BO_ ")) {
+                } else if (line.startsWith("BO_ ")) {
                     let messageData = line.split(/\s+/);
                     message.id = messageData[1];
                     message.name = messageData[2].split(":")[0];
@@ -72,24 +77,45 @@ export function parseString(dbcString: string): DbcParserResult {
                     message.sender = messageData[4];
                     message.signals = {};
                     state = MESSAGE_FOUND;
-                } else if (line.trim().startsWith("BA_DEF_ ") || line.trim().startsWith("BA_DEF_REL_ ")) {
-                    parseDEF(line);
-                } else if (line.trim().startsWith("VAL_ ")) {
-                    parseVAL(line);
-                } else if (line.trim().startsWith("BA_ ")) {
-                    parseBA(line);
-                } else if (line.startsWith("BA_DEF_DEF_")) {
-                    const data = line.trim().replace(/"|,|;/g, "").split(/\s+/);
-                    result.defaults[data[1]] = data[2];
-                } else if (line.startsWith("BA_REL_ ")) {
-                    const data = line.trim().replace(/"|,|;/g, "").split(/\s+/);
-                    result.messages[data[5]].signals[data[6]].receivers[data[3]][data[1]] = data[7];
-                } else if (line.trim().startsWith("CM_ ")) {
-                    parseCM(line);
+                } else if (semicolonLineLabels.includes(lineStart)) {
+                    let data = [];
+                    let longLine = line;
+                    let j = 0;
+                    while (!lines[i].endsWith(";")) {
+                        if (j > 0) longLine += "\n";
+                        longLine += lines[i];
+                        i++;
+                        j++;
+                    }
+                    switch (lineStart) {
+                        case "BA_DEF_ ":
+                        case "BA_DEF_REL_ ":
+                            parseDEF(longLine);
+                            break;
+                        case "VAL_ ":
+                            parseVAL(longLine);
+                            break;
+                        case "BA_ ":
+                            parseBA(longLine);
+                            break;
+                        case "BA_DEF_DEF_ ":
+                            data = longLine.replace(/"|,|;/g, "").split(/\s+/);
+                            result.defaults[data[1]] = data[2];
+                            break;
+                        case "BA_REL_ ":
+                            data = longLine.replace(/"|,|;/g, "").split(/\s+/);
+                            result.messages[data[5]].signals[data[6]].receivers[data[3]][data[1]] = data[7];
+                            break;
+                        case "CM_ ":
+                            parseCM(longLine);
+                            break;
+                        default:
+                            break;
+                    }
                 }
                 break;
             case MESSAGE_FOUND:
-                if (line.trim().startsWith("SG_")) {
+                if (line.startsWith("SG_")) {
                     const signal: SignalType = parseSG(line);
                     signal.messageId = message.id;
                     if (message.signals) message.signals[signal.name] = signal;
@@ -105,12 +131,13 @@ export function parseString(dbcString: string): DbcParserResult {
                 break;
         }
 
-    });
+    }
+    console.log(result);
     return result;
 }
 
 function parseVAL(line: string) {
-    const data = line.trim().replace(/;/g, "").split(/\s+/);
+    const data = line.replace(/;/g, "").split(/\s+/);
     const message = data[1];
     const signal = data[2];
     const values = data.slice(3).join(' ').split(/"\s/);
@@ -123,7 +150,7 @@ function parseVAL(line: string) {
 }
 
 function parseCM(line: string) {
-    const data = line.trim().replace(/;/g, "").split(/"/);
+    const data = line.replace(/;/g, "").split(/"/);
     const message = data[1];
     const info = data[0].trim().split(/\s+/);
 
@@ -173,7 +200,7 @@ function parseSG(line: string): SignalType {
 }
 
 function parseBA(line: string) {
-    const data = line.trim().replace(/"|,|;/g, "").split(/\s+/);
+    const data = line.replace(/"|,|;/g, "").split(/\s+/);
     const attrName = data[1];
     let signalName = "";
     let value: string;
@@ -214,7 +241,7 @@ function parseBA(line: string) {
 }
 
 function parseDEF(line: string) {
-    let data = line.trim().replace(/"|,|;/g, "").split(/\s+/);
+    let data = line.replace(/"|,|;/g, "").split(/\s+/);
     const attribute: AttrDefType = {};
     let valueStartIndex = 0;
     if (["BU_", "BO_", "SG_", "BU_SG_REL_"].includes(data[1])) {
