@@ -81,13 +81,10 @@ export function parseString(dbcString: string): DbcParserResult {
                     let data = [];
                     let longLine = "";
                     while (!lines[i].endsWith(";")) {
-                        if (line.startsWith("CM_ SG_ 257 ESP_Gierrate")) console.log(lines[i]);
                         longLine += lines[i] += "\n";
                         i++;
                     }
                     longLine += lines[i];
-                    // if(j > 2) console.log(lines[i]);
-                    if (line.startsWith("CM_ SG_ 257 ESP_Gierrate")) console.log(longLine);
                     switch (lineStart) {
                         case "BA_DEF_ ":
                         case "BA_DEF_REL_ ":
@@ -133,7 +130,6 @@ export function parseString(dbcString: string): DbcParserResult {
         }
 
     }
-    console.log(result);
     return result;
 }
 
