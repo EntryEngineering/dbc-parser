@@ -79,14 +79,15 @@ export function parseString(dbcString: string): DbcParserResult {
                     state = MESSAGE_FOUND;
                 } else if (semicolonLineLabels.includes(lineStart)) {
                     let data = [];
-                    let longLine = line;
-                    let j = 0;
+                    let longLine = "";
                     while (!lines[i].endsWith(";")) {
-                        if (j > 0) longLine += "\n";
-                        longLine += lines[i];
+                        if (line.startsWith("CM_ SG_ 257 ESP_Gierrate")) console.log(lines[i]);
+                        longLine += lines[i] += "\n";
                         i++;
-                        j++;
                     }
+                    longLine += lines[i];
+                    // if(j > 2) console.log(lines[i]);
+                    if (line.startsWith("CM_ SG_ 257 ESP_Gierrate")) console.log(longLine);
                     switch (lineStart) {
                         case "BA_DEF_ ":
                         case "BA_DEF_REL_ ":
